@@ -151,6 +151,10 @@ async function loadConfig() {
   populateTimezones(currentConfig.timezone);
   document.getElementById("immich-url").value = currentConfig.immichUrl;
   document.getElementById("refresh-interval").value = currentConfig.refreshIntervalSeconds;
+  document.getElementById("calendar-font-scale").value = String(
+    currentConfig.calendarFontScale || 1
+  );
+  document.getElementById("event-wrap-mode").value = currentConfig.eventWrapMode || "1";
 }
 
 let geocodeTimer = null;
@@ -202,6 +206,8 @@ async function saveAllSettings() {
       timezone: document.getElementById("timezone").value,
       immichUrl: document.getElementById("immich-url").value.trim(),
       refreshIntervalSeconds: Number(document.getElementById("refresh-interval").value),
+      calendarFontScale: Number(document.getElementById("calendar-font-scale").value),
+      eventWrapMode: document.getElementById("event-wrap-mode").value,
       location: {
         lat: Number(document.getElementById("lat").value),
         lon: Number(document.getElementById("lon").value),
