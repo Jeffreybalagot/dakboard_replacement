@@ -1,5 +1,5 @@
 const express = require("express");
-const { getCalendarClient, isConnected } = require("../lib/googleClient");
+const { getCalendarClientForAccount, isConnected } = require("../lib/googleClient");
 const { getConfig } = require("../lib/configStore");
 const { dedupeEvents } = require("../lib/dedupe");
 
@@ -33,21 +33,24 @@ router.get("/", async (req, res) => {
   }
 
   try {
-    const calendarClient = getCalendarClient();
-
+    // Calendars may belong to different linked Google accounts, each of
+    // which needs its own authenticated client. Priority is the calendar's
+    // position in the user's configured list, used by dedupe to break ties
+    // when the same event appears on more than one enabled calendar.
     const results = await Promise.allSettled(
-      enabledCalendars.map((cal, priority) =>
-        calendarClient.events
+      enabledCalendars.map((cal, priority) => {
+        const calendarClient = getCalendarClientForAccount(cal.accountEmail);
+        return calendarClient.events
           .list({
-            calendarId: cal.id,
+            calendarId: cal.calendarId || cal.id,
             timeMin: timeMin.toISOString(),
             timeMax: timeMax.toISOString(),
             singleEvents: true,
             orderBy: "startTime",
             maxResults: 250,
           })
-          .then((resp) => ({ cal, priority, items: resp.data.items || [] }))
-      )
+          .then((resp) => ({ cal, priority, items: resp.data.items || [] }));
+      })
     );
 
     const entries = [];
@@ -70,28 +73,37 @@ router.get("/", async (req, res) => {
           calendarPriority: priority,
           calendarSummary: cal.summary,
           calendarColor: cal.color,
+          accountEmail: cal.accountEmail,
         });
       }
     }
 
-    const deduped = dedupeEvents(entries).map(({ event, calendarId, calendarSummary, calendarColor }) => ({
-      id: event.id,
-      title: event.summary || "(No title)",
-      description: event.description || "",
-      location: event.location || "",
-      start: event.start?.dateTime || event.start?.date,
-      end: event.end?.dateTime || event.end?.date,
-      allDay: Boolean(event.start?.date && !event.start?.dateTime),
-      calendarId,
-      calendarSummary,
-      calendarColor,
-    }));
+    const deduped = dedupeEvents(entries).map(
+      ({ event, calendarId, calendarSummary, calendarColor, accountEmail }) => ({
+        id: event.id,
+        title: event.summary || "(No title)",
+        description: event.description || "",
+        location: event.location || "",
+        start: event.start?.dateTime || event.start?.date,
+        end: event.end?.dateTime || event.end?.date,
+        allDay: Boolean(event.start?.date && !event.start?.dateTime),
+        calendarId,
+        calendarSummary,
+        calendarColor,
+        accountEmail,
+      })
+    );
 
     deduped.sort((a, b) => new Date(a.start) - new Date(b.start));
 
     res.json({
       events: deduped,
-      calendars: enabledCalendars.map((c) => ({ id: c.id, summary: c.summary, color: c.color })),
+      calendars: enabledCalendars.map((c) => ({
+        id: c.id,
+        summary: c.summary,
+        color: c.color,
+        accountEmail: c.accountEmail,
+      })),
       errors,
     });
   } catch (err) {

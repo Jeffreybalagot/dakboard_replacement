@@ -26,24 +26,40 @@ function populateTimezones(selected) {
 
 async function loadAuthStatus() {
   const res = await fetch("/auth/status");
-  const { connected } = await res.json();
+  const { connected, accounts } = await res.json();
 
-  const pill = document.getElementById("connection-status");
-  const connectBtn = document.getElementById("connect-btn");
-  const disconnectBtn = document.getElementById("disconnect-btn");
+  const list = document.getElementById("accounts-list");
   const calendarSection = document.getElementById("calendar-section");
 
   if (connected) {
-    pill.textContent = "Connected";
-    pill.className = "status-pill connected";
-    connectBtn.textContent = "Reconnect / Add Another Account";
-    disconnectBtn.style.display = "inline-block";
+    list.innerHTML = accounts
+      .map(
+        (a) => `
+        <div class="account-row" data-email="${escapeHtml(a.email)}">
+          <span class="status-pill connected">Connected</span>
+          <span class="account-email">${escapeHtml(a.email)}</span>
+          <button class="secondary account-disconnect-btn" data-email="${escapeHtml(a.email)}">Disconnect</button>
+        </div>`
+      )
+      .join("");
+
+    list.querySelectorAll(".account-disconnect-btn").forEach((btn) => {
+      btn.addEventListener("click", async () => {
+        const email = btn.dataset.email;
+        if (!confirm(`Disconnect ${email}? Its calendars will stop showing on the dashboard.`)) return;
+        await fetch("/auth/disconnect", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email }),
+        });
+        loadAuthStatus();
+      });
+    });
+
     calendarSection.style.display = "block";
     loadCalendars();
   } else {
-    pill.textContent = "Not connected";
-    pill.className = "status-pill disconnected";
-    disconnectBtn.style.display = "none";
+    list.innerHTML = `<p class="hint">No Google accounts connected yet.</p>`;
     calendarSection.style.display = "none";
   }
 }
@@ -53,10 +69,13 @@ async function loadCalendars() {
   list.innerHTML = `<div class="hint" style="padding:8px">Loading calendars&hellip;</div>`;
   try {
     const res = await fetch("/api/calendars");
-    const calendars = await res.json();
-    if (!res.ok) throw new Error(calendars.error || "Failed to load calendars");
-    currentCalendars = calendars;
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || "Failed to load calendars");
+    currentCalendars = data.calendars || [];
     renderCalendarList();
+    if (data.errors && data.errors.length) {
+      toast(`Some accounts failed to load: ${data.errors.join("; ")}`);
+    }
   } catch (err) {
     list.innerHTML = `<div class="hint" style="padding:8px">${err.message}</div>`;
   }
@@ -64,17 +83,30 @@ async function loadCalendars() {
 
 function renderCalendarList() {
   const list = document.getElementById("calendar-list");
-  list.innerHTML = currentCalendars
-    .map(
-      (cal, i) => `
-      <label class="calendar-row">
-        <input type="checkbox" data-index="${i}" ${cal.enabled ? "checked" : ""} />
-        <span class="cal-dot" style="background:${cal.color}"></span>
-        <span class="cal-name">${escapeHtml(cal.summary)}</span>
-        ${cal.primary ? '<span class="cal-primary-badge">Primary</span>' : ""}
-      </label>`
-    )
-    .join("");
+
+  // Group by linked account so it's clear which calendars belong to whom.
+  const byAccount = new Map();
+  currentCalendars.forEach((cal, i) => {
+    if (!byAccount.has(cal.accountEmail)) byAccount.set(cal.accountEmail, []);
+    byAccount.get(cal.accountEmail).push({ ...cal, index: i });
+  });
+
+  let html = "";
+  for (const [email, cals] of byAccount) {
+    html += `<div class="calendar-group-header">${escapeHtml(email)}</div>`;
+    html += cals
+      .map(
+        (cal) => `
+        <label class="calendar-row">
+          <input type="checkbox" data-index="${cal.index}" ${cal.enabled ? "checked" : ""} />
+          <span class="cal-dot" style="background:${cal.color}"></span>
+          <span class="cal-name">${escapeHtml(cal.summary)}</span>
+          ${cal.primary ? '<span class="cal-primary-badge">Primary</span>' : ""}
+        </label>`
+      )
+      .join("");
+  }
+  list.innerHTML = html || `<div class="hint" style="padding:8px">No calendars found.</div>`;
 
   list.querySelectorAll("input[type=checkbox]").forEach((cb) => {
     cb.addEventListener("change", (e) => {
@@ -119,10 +151,6 @@ async function loadConfig() {
   populateTimezones(currentConfig.timezone);
   document.getElementById("immich-url").value = currentConfig.immichUrl;
   document.getElementById("refresh-interval").value = currentConfig.refreshIntervalSeconds;
-  document.getElementById("calendar-font-scale").value = String(
-    currentConfig.calendarFontScale || 1
-  );
-  document.getElementById("event-wrap-mode").value = currentConfig.eventWrapMode || "1";
 }
 
 let geocodeTimer = null;
@@ -174,8 +202,6 @@ async function saveAllSettings() {
       timezone: document.getElementById("timezone").value,
       immichUrl: document.getElementById("immich-url").value.trim(),
       refreshIntervalSeconds: Number(document.getElementById("refresh-interval").value),
-      calendarFontScale: Number(document.getElementById("calendar-font-scale").value),
-      eventWrapMode: document.getElementById("event-wrap-mode").value,
       location: {
         lat: Number(document.getElementById("lat").value),
         lon: Number(document.getElementById("lon").value),
@@ -227,18 +253,12 @@ function openGoogleLinkPopup() {
 window.addEventListener("message", (event) => {
   if (event.origin !== window.location.origin) return;
   if (event.data?.source === "dakboard-oauth" && event.data.status === "connected") {
-    toast("Google account connected");
+    toast(event.data.email ? `Connected ${event.data.email}` : "Google account connected");
     loadAuthStatus();
   }
 });
 
 document.getElementById("connect-btn").addEventListener("click", openGoogleLinkPopup);
-
-document.getElementById("disconnect-btn").addEventListener("click", async () => {
-  if (!confirm("Disconnect this Google account?")) return;
-  await fetch("/auth/logout", { method: "POST" });
-  loadAuthStatus();
-});
 
 document.getElementById("save-calendars-btn").addEventListener("click", saveCalendars);
 document.getElementById("refresh-calendars-btn").addEventListener("click", loadCalendars);
