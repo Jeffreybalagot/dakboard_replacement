@@ -1,0 +1,13 @@
+services:
+  dakboard-replacement:
+    build: .
+    # Or, once you've published an image, use instead of `build: .`:
+    # image: ghcr.io/jeffreybalagot/dakboard_replacement:latest
+    container_name: dakboard-replacement
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    env_file:
+      - .env
+    volumes:
+      - ./data:/app/data

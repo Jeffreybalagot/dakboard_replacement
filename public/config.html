@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Dashboard Settings</title>
+<link rel="stylesheet" href="css/config.css" />
+</head>
+<body>
+
+<header>
+  <h1>Dashboard Settings</h1>
+  <a href="/">&larr; Back to dashboard</a>
+</header>
+
+<main>
+
+  <div class="card">
+    <h2>Google Calendar</h2>
+    <p class="subtitle">Connect your Google account and choose which calendars to show.</p>
+
+    <span id="connection-status" class="status-pill disconnected">Not connected</span>
+
+    <div class="actions">
+      <button id="connect-btn">Connect Google Account</button>
+      <button id="disconnect-btn" class="secondary" style="display:none">Disconnect</button>
+    </div>
+
+    <div id="calendar-section" style="margin-top: 20px; display:none">
+      <label>Calendars to show</label>
+      <p class="hint">If the same event appears on two calendars you've enabled (e.g. a shared "Family" calendar), it will only be shown once on the dashboard.</p>
+      <div id="calendar-list" class="calendar-list"></div>
+      <div class="actions">
+        <button id="save-calendars-btn">Save Calendar Selection</button>
+        <button id="refresh-calendars-btn" class="secondary">Refresh List</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Weather &amp; Location</h2>
+    <p class="subtitle">Used for the weather panel and to set your local timezone.</p>
+
+    <label for="location-search">Location</label>
+    <input type="text" id="location-search" placeholder="Search for a city, e.g. Dublin, CA" />
+    <div id="geocode-results" class="geocode-results"></div>
+    <p class="hint" id="current-location-hint"></p>
+
+    <div class="row">
+      <div>
+        <label for="lat">Latitude</label>
+        <input type="number" step="any" id="lat" />
+      </div>
+      <div>
+        <label for="lon">Longitude</label>
+        <input type="number" step="any" id="lon" />
+      </div>
+    </div>
+
+    <label for="timezone">Timezone</label>
+    <select id="timezone"></select>
+  </div>
+
+  <div class="card">
+    <h2>Photos</h2>
+    <p class="subtitle">Public Immich kiosk / slideshow URL to embed.</p>
+    <label for="immich-url">Immich kiosk URL</label>
+    <input type="text" id="immich-url" placeholder="https://kiosk.jellymorph.net/" />
+  </div>
+
+  <div class="card">
+    <h2>Display</h2>
+    <p class="subtitle">The dashboard always shows the full current month; this only controls how often it re-checks for new events/weather.</p>
+    <label for="refresh-interval">Refresh interval (seconds)</label>
+    <input type="number" min="30" id="refresh-interval" />
+  </div>
+
+  <div class="actions">
+    <button id="save-all-btn">Save Settings</button>
+  </div>
+
+</main>
+
+<div class="save-toast" id="save-toast">Saved</div>
+
+<script src="js/config.js"></script>
+</body>
+</html>

@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Dashboard</title>
+<link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+
+<div id="left-rail">
+  <div id="clock-block">
+    <div id="clock">--:--<span class="ampm" id="ampm"></span></div>
+    <div id="date">Loading...</div>
+  </div>
+
+  <div id="photo-panel">
+    <iframe id="photo-frame" src="" title="Photo slideshow" allow="autoplay"></iframe>
+  </div>
+
+  <div id="weather-panel">
+    <div id="weather-current-row">
+      <div id="weather-icon">&#9728;&#65039;</div>
+      <div>
+        <div id="weather-temp">--&deg;</div>
+        <div id="weather-sub">Loading weather&hellip;</div>
+      </div>
+    </div>
+    <div id="weather-location">&nbsp;</div>
+    <div id="weather-forecast"></div>
+  </div>
+</div>
+
+<div id="calendar-panel">
+  <div id="legend"></div>
+  <div id="weekday-header">
+    <div>Sun</div><div>Mon</div><div>Tue</div><div>Wed</div><div>Thu</div><div>Fri</div><div>Sat</div>
+  </div>
+  <div id="month-grid"></div>
+</div>
+
+<div id="status-banner"></div>
+<a id="config-link" href="/config.html">edit</a>
+
+<script src="js/weatherCodes.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>

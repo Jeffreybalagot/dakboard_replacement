@@ -1,0 +1,21 @@
+{
+  "name": "dakboard-replacement",
+  "version": "1.0.0",
+  "description": "Self-hosted wall dashboard: Google Calendar agenda, weather, and Immich photo slideshow, with a config GUI.",
+  "main": "server/index.js",
+  "type": "commonjs",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "start": "node server/index.js",
+    "dev": "node --watch server/index.js"
+  },
+  "license": "MIT",
+  "dependencies": {
+    "cookie-parser": "^1.4.6",
+    "dotenv": "^16.4.5",
+    "express": "^4.21.0",
+    "googleapis": "^144.0.0"
+  }
+}
