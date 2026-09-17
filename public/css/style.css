@@ -260,9 +260,32 @@ body {
   border-radius: 4px;
   background: rgba(255,255,255,0.06);
   border-left: 3px solid #4285f4;
+  flex-shrink: 0;
+  /* Default (wrap mode "1"): single line, truncated with an ellipsis. */
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+/* Wrap mode "2": wrap onto up to two lines, then clip. */
+#month-grid.wrap-2 .event-chip {
+  white-space: normal;
+  overflow: hidden;
+  text-overflow: clip;
+  overflow-wrap: break-word;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+/* Wrap mode "full": wrap onto as many lines as the title needs. The day
+   cell and .day-events both clip overflow, so a long invite still can't
+   grow past its own day cell / push other days around. */
+#month-grid.wrap-full .event-chip {
+  white-space: normal;
+  overflow: visible;
+  text-overflow: clip;
+  overflow-wrap: break-word;
 }
 
 .event-chip .chip-time {

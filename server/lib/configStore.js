@@ -21,6 +21,10 @@ const DEFAULT_CONFIG = {
   refreshIntervalSeconds: 300,
   // Multiplier applied to the calendar event text size (0.5 - 1.5).
   calendarFontScale: 1,
+  // How calendar event titles wrap in the month grid: "1" (single line,
+  // truncated), "2" (up to two lines, then clipped), or "full" (wrap to
+  // however many lines the title needs, clipped by the day cell).
+  eventWrapMode: "1",
 };
 
 function getConfig() {

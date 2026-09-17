@@ -228,6 +228,10 @@ async function loadConfig() {
     appConfig.calendarFontScale || 1
   );
 
+  const grid = document.getElementById("month-grid");
+  grid.classList.remove("wrap-1", "wrap-2", "wrap-full");
+  grid.classList.add(`wrap-${appConfig.eventWrapMode || "1"}`);
+
   scheduleRefresh();
 }
 
