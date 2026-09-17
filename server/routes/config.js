@@ -3,6 +3,8 @@ const { getConfig, saveConfig } = require("../lib/configStore");
 
 const router = express.Router();
 
+const ALLOWED_FONT_SCALES = [0.5, 0.75, 1, 1.25, 1.5];
+
 router.get("/", (req, res) => {
   res.json(getConfig());
 });
@@ -16,6 +18,9 @@ router.put("/", (req, res) => {
   if (Number.isFinite(body.agendaDays)) allowed.agendaDays = body.agendaDays;
   if (Number.isFinite(body.refreshIntervalSeconds)) {
     allowed.refreshIntervalSeconds = body.refreshIntervalSeconds;
+  }
+  if (ALLOWED_FONT_SCALES.includes(body.calendarFontScale)) {
+    allowed.calendarFontScale = body.calendarFontScale;
   }
   if (body.location && typeof body.location === "object") {
     const { name, lat, lon } = body.location;

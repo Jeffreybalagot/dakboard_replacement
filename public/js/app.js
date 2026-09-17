@@ -223,6 +223,11 @@ async function loadConfig() {
     frame.src = appConfig.immichUrl;
   }
 
+  document.documentElement.style.setProperty(
+    "--calendar-font-scale",
+    appConfig.calendarFontScale || 1
+  );
+
   scheduleRefresh();
 }
 

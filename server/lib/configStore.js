@@ -19,6 +19,8 @@ const DEFAULT_CONFIG = {
   immichUrl: "https://kiosk.jellymorph.net/",
   // Seconds between frontend refreshes of events/weather.
   refreshIntervalSeconds: 300,
+  // Multiplier applied to the calendar event text size (0.5 - 1.5).
+  calendarFontScale: 1,
 };
 
 function getConfig() {
