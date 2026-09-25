@@ -64,33 +64,73 @@ function compactTime(date) {
   return minutes === 0 ? `${hours}${period}` : `${hours}:${pad(minutes)}${period}`;
 }
 
-// Builds the full set of grid cells for the month containing `anchor`,
-// padded out to complete weeks (Sun-Sat) at both ends, like a normal
-// calendar app month view.
-function buildMonthGrid(anchor) {
-  const year = anchor.getFullYear();
-  const month = anchor.getMonth();
+// Builds a rolling 5-week grid (Sun-Sat rows) with the current week in the
+// middle row: 2 weeks before, this week, 2 weeks after.
+const WEEKS_BEFORE = 2;
+const WEEKS_AFTER = 2;
 
-  const firstOfMonth = new Date(year, month, 1);
-  const lastOfMonth = new Date(year, month + 1, 0);
+function buildRollingGrid(anchor) {
+  const thisWeekStart = new Date(anchor.getFullYear(), anchor.getMonth(), anchor.getDate());
+  thisWeekStart.setDate(thisWeekStart.getDate() - thisWeekStart.getDay());
 
-  const gridStart = new Date(firstOfMonth);
-  gridStart.setDate(gridStart.getDate() - gridStart.getDay());
+  const gridStart = new Date(thisWeekStart);
+  gridStart.setDate(gridStart.getDate() - WEEKS_BEFORE * 7);
 
-  const gridEnd = new Date(lastOfMonth);
-  gridEnd.setDate(gridEnd.getDate() + (6 - gridEnd.getDay()));
+  const totalDays = (WEEKS_BEFORE + 1 + WEEKS_AFTER) * 7;
+  const currentWeekKey = localDateKeyFromDate(thisWeekStart);
 
   const days = [];
   const cursor = new Date(gridStart);
-  while (cursor <= gridEnd) {
+  for (let i = 0; i < totalDays; i++) {
+    const weekStart = new Date(cursor);
+    weekStart.setDate(weekStart.getDate() - weekStart.getDay());
     days.push({
       date: new Date(cursor),
       key: localDateKeyFromDate(cursor),
-      inMonth: cursor.getMonth() === month,
+      month: cursor.getMonth(),
+      year: cursor.getFullYear(),
+      isPast: cursor < new Date(anchor.getFullYear(), anchor.getMonth(), anchor.getDate()),
+      inCurrentWeek: localDateKeyFromDate(weekStart) === currentWeekKey,
     });
     cursor.setDate(cursor.getDate() + 1);
   }
-  return { days, gridStart, gridEnd, month, year };
+  const gridEnd = new Date(cursor);
+  gridEnd.setDate(gridEnd.getDate() - 1);
+  return { days, gridStart, gridEnd };
+}
+
+// Each month gets its own colour so it's obvious where a new month starts.
+// Index 0 = January. Accent is used for the month label / top border, tint
+// for the cell background.
+const MONTH_COLORS = [
+  { accent: "#5b9cff", tint: "rgba(91,156,255,0.10)" },  // Jan
+  { accent: "#e56fb0", tint: "rgba(229,111,176,0.10)" }, // Feb
+  { accent: "#4cc38a", tint: "rgba(76,195,138,0.10)" },  // Mar
+  { accent: "#b58cff", tint: "rgba(181,140,255,0.10)" }, // Apr
+  { accent: "#f2c14e", tint: "rgba(242,193,78,0.09)" },  // May
+  { accent: "#3fc1c9", tint: "rgba(63,193,201,0.10)" },  // Jun
+  { accent: "#ff7b54", tint: "rgba(255,123,84,0.10)" },  // Jul
+  { accent: "#7fd35b", tint: "rgba(127,211,91,0.09)" },  // Aug
+  { accent: "#6f8cff", tint: "rgba(111,140,255,0.11)" }, // Sep
+  { accent: "#ff9f1c", tint: "rgba(255,159,28,0.10)" },  // Oct
+  { accent: "#c98b5b", tint: "rgba(201,139,91,0.11)" },  // Nov
+  { accent: "#e5534b", tint: "rgba(229,83,75,0.10)" },   // Dec
+];
+
+function renderMonthKey(grid) {
+  const el = document.getElementById("month-key");
+  const seen = [];
+  for (const d of grid.days) {
+    const id = `${d.year}-${d.month}`;
+    if (!seen.some((s) => s.id === id)) seen.push({ id, date: d.date, month: d.month });
+  }
+  el.innerHTML = seen
+    .map((s) => {
+      const c = MONTH_COLORS[s.month];
+      const label = s.date.toLocaleDateString(undefined, { month: "long" });
+      return `<span class="month-key-item" style="--month-accent:${c.accent};--month-tint:${c.tint}">${label}</span>`;
+    })
+    .join("");
 }
 
 function renderLegend(calendars) {
@@ -113,12 +153,27 @@ function renderMonthGrid(grid, eventsByDay) {
   const MAX_VISIBLE = 5;
 
   let html = "";
-  for (const day of grid.days) {
+  grid.days.forEach((day, i) => {
     const events = eventsByDay.get(day.key) || [];
     const isToday = day.key === todayKey;
+    const color = MONTH_COLORS[day.month];
+    const isFirstOfMonth = day.date.getDate() === 1;
+    // Show the month name on the 1st, and on the very first cell of the grid.
+    const showMonth = isFirstOfMonth || i === 0;
 
-    html += `<div class="day-cell${day.inMonth ? "" : " outside-month"}">`;
+    const classes = ["day-cell"];
+    if (day.isPast) classes.push("past");
+    if (day.inCurrentWeek) classes.push("current-week");
+    if (isToday) classes.push("is-today");
+    if (isFirstOfMonth) classes.push("month-start");
+
+    html += `<div class="${classes.join(" ")}" style="--month-accent:${color.accent};--month-tint:${color.tint}">`;
+    html += `<div class="day-head">`;
     html += `<div class="day-number${isToday ? " today" : ""}">${day.date.getDate()}</div>`;
+    if (showMonth) {
+      html += `<div class="month-label">${day.date.toLocaleDateString(undefined, { month: "short" })}</div>`;
+    }
+    html += `</div>`;
     html += `<div class="day-events">`;
 
     const visible = events.slice(0, MAX_VISIBLE);
@@ -131,12 +186,13 @@ function renderMonthGrid(grid, eventsByDay) {
     }
 
     html += `</div></div>`;
-  }
+  });
   container.innerHTML = html;
 }
 
 async function loadEvents() {
-  const grid = buildMonthGrid(new Date());
+  const grid = buildRollingGrid(new Date());
+  renderMonthKey(grid);
   const startParam = localDateKeyFromDate(grid.gridStart);
   const endParam = localDateKeyFromDate(grid.gridEnd);
 

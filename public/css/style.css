@@ -6,6 +6,9 @@
   --text-dim: #8a8a8a;
   --accent: #e5442f;
   --calendar-font-scale: 1;
+  --cell-bg: #121212;
+  --cell-border: #2c2c2c;
+  --cell-gap: 6px;
   color-scheme: dark;
 }
 
@@ -157,16 +160,24 @@ body {
   height: 100%;
 }
 
+#calendar-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 12px 20px;
+  flex-shrink: 0;
+}
+
 #legend {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: 18px;
-  padding: 12px 20px;
   font-size: 0.72vw;
   color: var(--text-dim);
   text-transform: uppercase;
   letter-spacing: 1px;
-  flex-shrink: 0;
 }
 
 .legend-item {
@@ -182,20 +193,40 @@ body {
   display: inline-block;
 }
 
+#month-key {
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.month-key-item {
+  font-size: 0.72vw;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--month-accent);
+  background: var(--month-tint);
+  border: 1px solid var(--month-accent);
+  border-radius: 999px;
+  padding: 3px 12px;
+}
+
 #weekday-header {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
+  gap: var(--cell-gap);
+  padding: 0 var(--cell-gap);
   flex-shrink: 0;
-  border-top: 1px solid var(--panel-border);
-  border-bottom: 1px solid var(--panel-border);
 }
 
 #weekday-header div {
   text-align: center;
-  padding: 8px 0;
+  padding: 6px 0;
   font-size: 0.9vw;
   color: var(--text-dim);
   font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 1px;
 }
 
 #month-grid {
@@ -204,32 +235,74 @@ body {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
   grid-auto-rows: 1fr;
+  gap: var(--cell-gap);
+  padding: var(--cell-gap);
 }
 
+/* Each day is its own card: tinted by month, with a coloured top edge. */
 .day-cell {
-  border-right: 1px solid var(--grid-line);
-  border-bottom: 1px solid var(--grid-line);
-  padding: 6px 6px 4px;
+  position: relative;
+  background:
+    linear-gradient(var(--month-tint), var(--month-tint)),
+    var(--cell-bg);
+  border: 1px solid var(--cell-border);
+  border-top: 3px solid var(--month-accent);
+  border-radius: 8px;
+  padding: 6px 7px 5px;
   overflow: hidden;
   display: flex;
   flex-direction: column;
   min-width: 0;
   min-height: 0;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.6);
 }
 
-.day-cell.outside-month .day-number {
-  color: #3a3a3a;
+/* Days already gone are dimmed so "now" and the future pop. */
+.day-cell.past {
+  opacity: 0.55;
 }
 
-.day-cell.outside-month .event-chip {
-  opacity: 0.45;
+/* The current week (middle row) gets a brighter border. */
+.day-cell.current-week {
+  border-color: #4a4a4a;
+  border-top-color: var(--month-accent);
+  background:
+    linear-gradient(var(--month-tint), var(--month-tint)),
+    #1a1a1a;
+}
+
+.day-cell.is-today {
+  border: 2px solid var(--accent);
+  border-top: 3px solid var(--accent);
+  box-shadow: 0 0 0 1px rgba(229, 68, 47, 0.35), 0 0 14px rgba(229, 68, 47, 0.35);
+}
+
+/* First day of a new month: a stronger left edge marks the boundary. */
+.day-cell.month-start {
+  border-left: 3px solid var(--month-accent);
+}
+
+.day-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px;
+  margin-bottom: 3px;
+  flex-shrink: 0;
 }
 
 .day-number {
   font-size: 1.1vw;
-  color: var(--text-dim);
-  margin-bottom: 3px;
-  flex-shrink: 0;
+  color: #c8c8c8;
+  font-weight: 500;
+}
+
+.month-label {
+  font-size: 0.72vw;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--month-accent);
 }
 
 .day-number.today {
@@ -258,7 +331,7 @@ body {
   line-height: 1.35;
   padding: 2px 6px;
   border-radius: 4px;
-  background: rgba(255,255,255,0.06);
+  background: rgba(255,255,255,0.09);
   border-left: 3px solid #4285f4;
   flex-shrink: 0;
   /* Default (wrap mode "1"): single line, truncated with an ellipsis. */
