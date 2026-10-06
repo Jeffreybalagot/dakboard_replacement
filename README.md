@@ -77,6 +77,9 @@ cp .env.example .env
 | `GOOGLE_CLIENT_SECRET` | yes | Same. |
 | `GOOGLE_REDIRECT_URI` | yes | Must exactly match a redirect URI on that OAuth client. |
 | `CONFIG_PASSWORD` | no | If set, `/config.html` (and its APIs) require this password to access. Leave blank on a trusted home LAN if you don't want a login step. |
+| `HA_URL` | no | Home Assistant base URL, e.g. `https://ha.jellymorph.net`. Used for the egg count tile next to the clock. |
+| `HA_TOKEN` | no | Home Assistant long-lived access token. Leave blank to hide the egg count tile. |
+| `HA_EGG_ENTITY` | no | Entity whose state is the egg count. Defaults to `input_number.egg_count`. |
 
 Everything else (timezone, weather location, which calendars are shown, the Immich URL, how many
 days of agenda to show, refresh interval) is configured **from the settings page at `/config.html`**

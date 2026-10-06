@@ -45,6 +45,46 @@ body {
   flex-shrink: 0;
 }
 
+#clock-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+/* Egg count tile, fed by Home Assistant via /api/eggs. Hidden until the
+   server reports that Home Assistant is configured. */
+#egg-tile {
+  display: flex;
+  align-items: center;
+  gap: 0.8vw;
+  padding: 0.6vw 1vw;
+  border: 1px solid var(--cell-border);
+  border-radius: 0.8vw;
+  background: var(--cell-bg);
+  white-space: nowrap;
+}
+
+#egg-tile[hidden] { display: none; }
+
+#egg-icon {
+  width: 1.6vw;
+  height: 1.6vw;
+  fill: #ffb300;
+  flex-shrink: 0;
+}
+
+#egg-title {
+  font-size: 1vw;
+  font-weight: 600;
+}
+
+#egg-count {
+  font-size: 0.9vw;
+  color: var(--text-dim);
+  margin-top: 2px;
+}
+
 #clock {
   font-size: 2.6vw;
   font-weight: 300;

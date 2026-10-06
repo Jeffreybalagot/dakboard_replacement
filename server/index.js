@@ -9,6 +9,7 @@ const calendarRoutes = require("./routes/calendars");
 const eventRoutes = require("./routes/events");
 const weatherRoutes = require("./routes/weather");
 const geocodeRoutes = require("./routes/geocode");
+const eggRoutes = require("./routes/eggs");
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -54,6 +55,7 @@ app.use("/api/calendars", calendarRoutes);
 app.use("/api/events", eventRoutes);
 app.use("/api/weather", weatherRoutes);
 app.use("/api/geocode", geocodeRoutes);
+app.use("/api/eggs", eggRoutes);
 
 app.use(express.static(path.join(__dirname, "..", "public")));
 

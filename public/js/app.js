@@ -268,6 +268,29 @@ async function loadWeather() {
   }
 }
 
+// ---------- Egg count (Home Assistant) ----------
+
+async function loadEggs() {
+  const tile = document.getElementById("egg-tile");
+  try {
+    const res = await fetch("/api/eggs");
+    const data = await res.json();
+    if (!data.configured) {
+      tile.hidden = true;
+      return;
+    }
+    tile.hidden = false;
+    const label = document.getElementById("egg-count");
+    if (!res.ok || data.count === null || data.count === undefined) {
+      label.textContent = "unavailable";
+    } else {
+      label.textContent = `${data.count} ${data.count === 1 ? "egg" : "eggs"}`;
+    }
+  } catch (err) {
+    // Leave the last known count on screen if the server is briefly unreachable.
+  }
+}
+
 // ---------- Config / bootstrap ----------
 
 async function loadConfig() {
@@ -297,6 +320,7 @@ function scheduleRefresh() {
   refreshTimer = setInterval(() => {
     loadEvents();
     loadWeather();
+    loadEggs();
   }, seconds * 1000);
 }
 
@@ -306,4 +330,5 @@ setInterval(tickClock, 1000);
 loadConfig().then(() => {
   loadEvents();
   loadWeather();
+  loadEggs();
 });
