@@ -302,7 +302,7 @@ body {
   opacity: 0.55;
 }
 
-/* The current week (middle row) gets a brighter border. */
+/* The current week (second row) gets a brighter border. */
 .day-cell.current-week {
   border-color: #4a4a4a;
   border-top-color: var(--month-accent);

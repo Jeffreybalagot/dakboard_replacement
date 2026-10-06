@@ -65,9 +65,9 @@ function compactTime(date) {
 }
 
 // Builds a rolling 5-week grid (Sun-Sat rows) with the current week in the
-// middle row: 2 weeks before, this week, 2 weeks after.
-const WEEKS_BEFORE = 2;
-const WEEKS_AFTER = 2;
+// second row: 1 week before, this week, 3 weeks after.
+const WEEKS_BEFORE = 1;
+const WEEKS_AFTER = 3;
 
 function buildRollingGrid(anchor) {
   const thisWeekStart = new Date(anchor.getFullYear(), anchor.getMonth(), anchor.getDate());
