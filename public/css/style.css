@@ -429,6 +429,28 @@ body {
   z-index: 50;
 }
 
+#status-banner .banner-list {
+  margin: 4px 0 0;
+  padding-left: 18px;
+}
+
+#status-banner .banner-account {
+  background: #ffd7d7;
+  color: #4a1f1f;
+  font-weight: 700;
+  padding: 0 6px;
+  border-radius: 4px;
+}
+
+#status-banner .banner-cals {
+  opacity: 0.8;
+}
+
+#status-banner .banner-action {
+  color: #fff;
+  font-weight: 600;
+}
+
 #config-link {
   position: fixed;
   bottom: 10px;

@@ -1,5 +1,11 @@
 const express = require("express");
-const { getCalendarClientForAccount, listAccounts, isConnected } = require("../lib/googleClient");
+const {
+  getCalendarClientForAccount,
+  listAccounts,
+  isConnected,
+  describeGoogleError,
+  setAccountHealth,
+} = require("../lib/googleClient");
 const { getConfig, setCalendars } = require("../lib/configStore");
 
 const router = express.Router();
@@ -27,6 +33,7 @@ router.get("/", async (req, res) => {
           const calendar = getCalendarClientForAccount(email);
           const { data } = await calendar.calendarList.list({ maxResults: 250 });
           const items = data.items || [];
+          setAccountHealth(email, null);
           return items.map((cal) => {
             const id = compositeId(email, cal.id);
             const existing = existingById.get(id);
@@ -42,8 +49,10 @@ router.get("/", async (req, res) => {
             };
           });
         } catch (err) {
-          console.error(`[calendars] list failed for ${email}:`, err);
-          errors.push(`${email}: ${err.message}`);
+          const problem = describeGoogleError(err);
+          console.error(`[calendars] list failed for ${email}: ${problem.message} (${problem.detail})`);
+          if (problem.needsReconnect) setAccountHealth(email, problem);
+          errors.push(`${email}: ${problem.message}`);
           return [];
         }
       })

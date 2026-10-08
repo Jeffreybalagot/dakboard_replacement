@@ -32,7 +32,63 @@ function getOAuthClient() {
       "Missing GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET / GOOGLE_REDIRECT_URI. Set them in your .env file."
     );
   }
-  return new google.auth.OAuth2(GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, GOOGLE_REDIRECT_URI);
+  return new google.auth.OAuth2({
+    clientId: GOOGLE_CLIENT_ID,
+    clientSecret: GOOGLE_CLIENT_SECRET,
+    redirectUri: GOOGLE_REDIRECT_URI,
+    // By default google-auth-library trusts the stored expiry_date and will
+    // NOT refresh+retry when Google answers 401 "Invalid Credentials" (e.g.
+    // the access token was revoked or rotated before its expiry). With this
+    // on, a 401 triggers one refresh with the refresh_token and a retry.
+    forceRefreshOnFailure: true,
+  });
+}
+
+// Turns a googleapis/gaxios error into something a human can act on, and
+// flags whether the fix is "reconnect this account in the config page".
+function describeGoogleError(err) {
+  const status = err?.response?.status || err?.code;
+  const data = err?.response?.data || {};
+  const oauthError = typeof data.error === "string" ? data.error : null; // token endpoint style
+  const apiReason = data.error?.errors?.[0]?.reason; // Calendar API style
+  const raw = err?.message || "Unknown error";
+
+  if (oauthError === "invalid_grant" || /invalid_grant/i.test(raw)) {
+    return {
+      needsReconnect: true,
+      message: "Google sign-in expired or was revoked — reconnect this account",
+      detail: data.error_description || raw,
+    };
+  }
+  if (/no refresh token/i.test(raw)) {
+    return { needsReconnect: true, message: "No refresh token stored — reconnect this account", detail: raw };
+  }
+  if (status === 401 || /invalid credentials/i.test(raw)) {
+    return { needsReconnect: true, message: "Invalid credentials — reconnect this account", detail: raw };
+  }
+  if (status === 404 || apiReason === "notFound") {
+    return { needsReconnect: false, message: "Calendar not found (removed or unshared?)", detail: raw };
+  }
+  if (status === 403) {
+    return { needsReconnect: false, message: `Access denied (${apiReason || "forbidden"})`, detail: raw };
+  }
+  return { needsReconnect: false, message: raw, detail: raw };
+}
+
+// Remembers the last fetch result per account so the config page can show
+// which account is broken. Only writes when the state actually changes.
+function setAccountHealth(email, problem) {
+  const accounts = readAccounts();
+  const account = accounts[email];
+  if (!account) return;
+  const next = problem
+    ? { message: problem.message, needsReconnect: problem.needsReconnect, at: new Date().toISOString() }
+    : null;
+  const prev = account.lastError || null;
+  if (!prev && !next) return;
+  if (prev && next && prev.message === next.message) return;
+  account.lastError = next;
+  writeAccounts(accounts);
 }
 
 function getAuthUrl() {
@@ -66,6 +122,7 @@ async function handleOAuthCallback(code) {
     tokens: { ...(existing?.tokens || {}), ...tokens },
     connectedAt: existing?.connectedAt || new Date().toISOString(),
     updatedAt: new Date().toISOString(),
+    lastError: null, // fresh sign-in clears any previous failure
   };
   writeAccounts(accounts);
 
@@ -75,7 +132,12 @@ async function handleOAuthCallback(code) {
 function listAccounts() {
   const accounts = readAccounts();
   return Object.values(accounts)
-    .map((a) => ({ email: a.email, connectedAt: a.connectedAt }))
+    .map((a) => ({
+      email: a.email,
+      connectedAt: a.connectedAt,
+      hasRefreshToken: Boolean(a.tokens?.refresh_token),
+      lastError: a.lastError || null,
+    }))
     .sort((a, b) => a.email.localeCompare(b.email));
 }
 
@@ -128,5 +190,7 @@ module.exports = {
   isConnected,
   disconnectAccount,
   getCalendarClientForAccount,
+  describeGoogleError,
+  setAccountHealth,
   SCOPES,
 };

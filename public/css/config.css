@@ -243,6 +243,24 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
   flex-shrink: 0;
 }
 
+.account-row.account-broken {
+  border-color: #b3261e;
+  background: #fff6f5;
+}
+
+.account-row .account-error {
+  display: block;
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: #b3261e;
+  margin-top: 2px;
+}
+
+.account-row .account-reconnect-btn {
+  padding: 6px 14px;
+  font-size: 0.85rem;
+}
+
 .calendar-group-header {
   font-size: 0.75rem;
   font-weight: 700;

@@ -1,5 +1,10 @@
 const express = require("express");
-const { getCalendarClientForAccount, isConnected } = require("../lib/googleClient");
+const {
+  getCalendarClientForAccount,
+  isConnected,
+  describeGoogleError,
+  setAccountHealth,
+} = require("../lib/googleClient");
 const { getConfig } = require("../lib/configStore");
 const { dedupeEvents } = require("../lib/dedupe");
 
@@ -37,31 +42,59 @@ router.get("/", async (req, res) => {
     // which needs its own authenticated client. Priority is the calendar's
     // position in the user's configured list, used by dedupe to break ties
     // when the same event appears on more than one enabled calendar.
+    // One authenticated client per account (not per calendar), so an
+    // account with several enabled calendars refreshes its token once
+    // instead of racing N parallel refreshes.
+    const clients = new Map();
+    const clientFor = (email) => {
+      if (!clients.has(email)) clients.set(email, getCalendarClientForAccount(email));
+      return clients.get(email);
+    };
+
     const results = await Promise.allSettled(
-      enabledCalendars.map((cal, priority) => {
-        const calendarClient = getCalendarClientForAccount(cal.accountEmail);
-        return calendarClient.events
-          .list({
+      enabledCalendars.map(async (cal, priority) => {
+        try {
+          const resp = await clientFor(cal.accountEmail).events.list({
             calendarId: cal.calendarId || cal.id,
             timeMin: timeMin.toISOString(),
             timeMax: timeMax.toISOString(),
             singleEvents: true,
             orderBy: "startTime",
             maxResults: 250,
-          })
-          .then((resp) => ({ cal, priority, items: resp.data.items || [] }));
+          });
+          return { cal, priority, items: resp.data.items || [] };
+        } catch (err) {
+          err.cal = cal; // keep track of which calendar/account failed
+          throw err;
+        }
       })
     );
 
     const entries = [];
     const errors = [];
+    const failedAccounts = new Map(); // email -> problem
+    const okAccounts = new Set();
 
     for (const result of results) {
       if (result.status !== "fulfilled") {
-        errors.push(result.reason?.message || "Unknown calendar fetch error");
+        const err = result.reason || {};
+        const cal = err.cal || {};
+        const problem = describeGoogleError(err);
+        console.error(
+          `[events] ${cal.accountEmail || "?"} / ${cal.summary || cal.calendarId || "?"}: ${problem.message} (${problem.detail})`
+        );
+        errors.push({
+          accountEmail: cal.accountEmail || "unknown account",
+          calendarId: cal.id,
+          calendarSummary: cal.summary || cal.calendarId || "unknown calendar",
+          message: problem.message,
+          needsReconnect: problem.needsReconnect,
+        });
+        if (cal.accountEmail && problem.needsReconnect) failedAccounts.set(cal.accountEmail, problem);
         continue;
       }
       const { cal, priority, items } = result.value;
+      okAccounts.add(cal.accountEmail);
       for (const event of items) {
         // Skip events the user has declined on this calendar.
         const self = (event.attendees || []).find((a) => a.self);
@@ -77,6 +110,10 @@ router.get("/", async (req, res) => {
         });
       }
     }
+
+    // Persist per-account health so the config page can flag broken accounts.
+    for (const [email, problem] of failedAccounts) setAccountHealth(email, problem);
+    for (const email of okAccounts) if (!failedAccounts.has(email)) setAccountHealth(email, null);
 
     const deduped = dedupeEvents(entries).map(
       ({ event, calendarId, calendarSummary, calendarColor, accountEmail }) => ({

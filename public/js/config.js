@@ -33,15 +33,30 @@ async function loadAuthStatus() {
 
   if (connected) {
     list.innerHTML = accounts
-      .map(
-        (a) => `
-        <div class="account-row" data-email="${escapeHtml(a.email)}">
-          <span class="status-pill connected">Connected</span>
-          <span class="account-email">${escapeHtml(a.email)}</span>
+      .map((a) => {
+        const broken = (a.lastError && a.lastError.needsReconnect) || a.hasRefreshToken === false;
+        const reason = a.lastError
+          ? a.lastError.message
+          : a.hasRefreshToken === false
+          ? "No refresh token stored — reconnect this account"
+          : "";
+        return `
+        <div class="account-row${broken ? " account-broken" : ""}" data-email="${escapeHtml(a.email)}">
+          <span class="status-pill ${broken ? "disconnected" : "connected"}">${broken ? "Needs reconnect" : "Connected"}</span>
+          <span class="account-email">${escapeHtml(a.email)}${
+            reason ? `<span class="account-error">${escapeHtml(reason)}</span>` : ""
+          }</span>
+          ${broken ? `<button class="account-reconnect-btn">Reconnect</button>` : ""}
           <button class="secondary account-disconnect-btn" data-email="${escapeHtml(a.email)}">Disconnect</button>
-        </div>`
-      )
+        </div>`;
+      })
       .join("");
+
+    // Reconnecting just re-runs the normal Google sign-in; signing in with the
+    // same account overwrites its stored tokens and clears the error.
+    list.querySelectorAll(".account-reconnect-btn").forEach((btn) => {
+      btn.addEventListener("click", openGoogleLinkPopup);
+    });
 
     list.querySelectorAll(".account-disconnect-btn").forEach((btn) => {
       btn.addEventListener("click", async () => {

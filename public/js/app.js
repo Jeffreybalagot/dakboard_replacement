@@ -22,14 +22,38 @@ function tickClock() {
   });
 }
 
-function showBanner(message) {
+function showBanner(message, { html = false } = {}) {
   const banner = document.getElementById("status-banner");
   if (!message) {
     banner.style.display = "none";
     return;
   }
-  banner.textContent = message;
+  if (html) banner.innerHTML = message;
+  else banner.textContent = message;
   banner.style.display = "block";
+}
+
+// Groups per-calendar errors by Google account so the banner names exactly
+// which account(s) are broken and which of their calendars are missing.
+function renderCalendarErrors(errors) {
+  const byAccount = new Map();
+  for (const e of errors) {
+    // Older servers sent plain strings; show those as-is.
+    const err = typeof e === "string" ? { accountEmail: "unknown account", calendarSummary: "", message: e } : e;
+    const key = err.accountEmail || "unknown account";
+    if (!byAccount.has(key)) byAccount.set(key, { message: err.message, needsReconnect: false, calendars: [] });
+    const entry = byAccount.get(key);
+    if (err.calendarSummary) entry.calendars.push(err.calendarSummary);
+    if (err.needsReconnect) entry.needsReconnect = true;
+  }
+  const items = [...byAccount].map(([email, info]) => {
+    const cals = info.calendars.length ? ` <span class="banner-cals">(${info.calendars.map(escapeHtml).join(", ")})</span>` : "";
+    const action = info.needsReconnect && !/reconnect/i.test(info.message || "") ? ` <span class="banner-action">→ reconnect in Settings</span>` : "";
+    const settings = info.needsReconnect ? ` <span class="banner-action">(Settings → Reconnect)</span>` : "";
+    return `<li><span class="banner-account">${escapeHtml(email)}</span>${cals}: ${escapeHtml(info.message)}${action || settings}</li>`;
+  });
+  const n = byAccount.size;
+  return `<strong>${n === 1 ? "1 account" : `${n} accounts`} failed to load:</strong><ul class="banner-list">${items.join("")}</ul>`;
 }
 
 function escapeHtml(str) {
@@ -218,7 +242,7 @@ async function loadEvents() {
     renderMonthGrid(grid, eventsByDay);
 
     if (data.errors && data.errors.length) {
-      showBanner(`Some calendars failed to load: ${data.errors.join("; ")}`);
+      showBanner(renderCalendarErrors(data.errors), { html: true });
     } else {
       showBanner(null);
     }
