@@ -22,9 +22,19 @@ function eventTimeKey(event) {
   return `${start}|${end}`;
 }
 
+// With singleEvents:true Google expands a recurring series into one item per
+// occurrence, and every occurrence shares the series' iCalUID. The instance's
+// start time has to be part of the key, or a weekly event collapses to one.
+function instanceKey(event) {
+  const s = event.originalStartTime || event.start || {};
+  // Epoch ms so the same instance matches across calendars that report it in
+  // different timezones.
+  return s.dateTime ? String(new Date(s.dateTime).getTime()) : s.date || "";
+}
+
 function signatureFor(event) {
   if (event.iCalUID) {
-    return `ical:${event.iCalUID}`;
+    return `ical:${event.iCalUID}|${instanceKey(event)}`;
   }
   return `title:${normalizeTitle(event.summary)}|${eventTimeKey(event)}`;
 }
